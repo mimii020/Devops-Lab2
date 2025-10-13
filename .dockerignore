@@ -1,6 +1,5 @@
 .git
 .gitignore
-.gitignore
 HELP.md
 target/
 .mvn/
