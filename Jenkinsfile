@@ -3,7 +3,7 @@ pipeline {
     
     environment {
         DOCKER_REGISTRY = 'docker.io'
-        DOCKER_IMAGE = 'mimii020/Devops-Lab1'
+        DOCKER_IMAGE = 'mimii020/devops-lab2'
         DOCKER_CREDENTIALS = 'docker-hub-credentials'
     }
     
