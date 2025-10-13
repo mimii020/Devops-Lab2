@@ -51,9 +51,7 @@ pipeline {
                     def version = sh(script: 'mvn help:evaluate -Dexpression=project.version -q -DforceStdout', returnStdout: true).trim()
                     def timestamp = sh(script: 'date +%Y%m%d%H%M%S', returnStdout: true).trim()
                     
-                    docker.build("${DOCKER_IMAGE}:${version}")
-                    docker.build("${DOCKER_IMAGE}:latest")
-                    docker.build("${DOCKER_IMAGE}:build-${timestamp}")
+                    sh "DOCKER_BUILDKIT=1 docker build -t ${DOCKER_IMAGE}:${version} ."
                 }
             }
         }
