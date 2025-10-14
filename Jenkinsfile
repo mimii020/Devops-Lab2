@@ -2,8 +2,8 @@ pipeline {
     agent any
     
     environment {
-        DOCKER_REGISTRY = 'docker.io'
-        DOCKER_IMAGE = 'mimii020/devops-lab2'
+        DOCKER_REGISTRY = 'mimii020/devops-lab2'
+        DOCKER_IMAGE = 'devops-lab2'
         DOCKER_CREDENTIALS = 'docker-hub-credentials'
     }
     
