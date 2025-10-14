@@ -62,9 +62,7 @@ pipeline {
         
         stage('Push to Docker Hub') {
             steps {
-                script {
-                    def version = sh(script: 'mvn help:evaluate -Dexpression=project.version -q -DforceStdout', returnStdout: true).trim()
-                    
+                script {                    
                     docker.withRegistry("https://${DOCKER_REGISTRY}", DOCKER_CREDENTIALS) {
                         docker.image("${DOCKER_IMAGE}:${version}").push()
                         docker.image("${DOCKER_IMAGE}:latest").push()
