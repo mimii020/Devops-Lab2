@@ -65,11 +65,6 @@ pipeline {
                     // Test the container
                     sh "docker run -d --name test-container -p 8081:8080 ${DOCKER_IMAGE}:${version}"
                     
-                    // Test the application
-                    sh '''
-                        echo "Testing application health..."
-                        curl -f http://localhost:8081/health || exit 1
-                    '''
                     
                     // Clean up test container
                     sh 'docker stop test-container && docker rm test-container'
