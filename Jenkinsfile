@@ -64,7 +64,6 @@ pipeline {
                     
                     // Test the container
                     sh "docker run -d --name test-container -p 8081:8080 ${DOCKER_IMAGE}:${version}"
-                    sh 'sleep 30' // Wait for application to start
                     
                     // Test the application
                     sh '''
