@@ -26,8 +26,6 @@ pipeline {
             }
         }
         
-        
-        
         stage('Package Application') {
             steps {
                 sh 'mvn package -DskipTests'
@@ -36,35 +34,46 @@ pipeline {
         }
         
         stage('Build Docker Image') {
-    steps {
-        script {
-            def version = sh(script: 'mvn help:evaluate -Dexpression=project.version -q -DforceStdout', returnStdout: true).trim()
-            
-            // Build the image with version tag
-            sh "docker build -t mimii020/devops-lab2:${version} ."
-            
-            // ALSO create the latest tag
-            sh "docker tag mimii020/devops-lab2:${version} mimii020/devops-lab2:latest"
-            
-            // Verify both tags exist
-            sh """
-                echo "Verifying Docker images:"
-                docker images | grep devops-lab2
-            """
+            steps {
+                script {
+                    def version = sh(script: 'mvn help:evaluate -Dexpression=project.version -q -DforceStdout', returnStdout: true).trim()
+                    
+                    echo "Building Docker image with version: ${version}"
+                    
+                    // Build the image with version tag
+                    sh "docker build -t ${DOCKER_IMAGE}:${version} ."
+                    
+                    // ALSO create the latest tag
+                    sh "docker tag ${DOCKER_IMAGE}:${version} ${DOCKER_IMAGE}:latest"
+                    
+                    // Verify both tags exist
+                    sh """
+                        echo "Verifying Docker images:"
+                        docker images | grep devops-lab2
+                    """
+                }
+            }
         }
-    }
-}
-// sonarqube for cod quality analysis
         
         stage('Test Docker Image') {
             steps {
                 script {
                     def version = sh(script: 'mvn help:evaluate -Dexpression=project.version -q -DforceStdout', returnStdout: true).trim()
                     
-                    docker.image("${DOCKER_IMAGE}:${version}").withRun('-p 8081:8080') { container ->
-                        sh 'sleep 30' // Wait for application to start
-                        sh 'curl -f http://localhost:8080/health || exit 1'
-                    }
+                    echo "Testing Docker image: ${DOCKER_IMAGE}:${version}"
+                    
+                    // Test the container
+                    sh "docker run -d --name test-container -p 8081:8080 ${DOCKER_IMAGE}:${version}"
+                    sh 'sleep 30' // Wait for application to start
+                    
+                    // Test the application
+                    sh '''
+                        echo "Testing application health..."
+                        curl -f http://localhost:8081/health || exit 1
+                    '''
+                    
+                    // Clean up test container
+                    sh 'docker stop test-container && docker rm test-container'
                 }
             }
         }
@@ -76,15 +85,7 @@ pipeline {
                     
                     echo "=== Starting Docker Hub Push ==="
                     echo "Version: ${version}"
-                    echo "Image: mimii020/devops-lab2"
-                    
-                    // First, verify the image exists locally with correct tags
-                    sh """
-                        echo "Checking local images..."
-                        docker images | grep devops-lab2
-                        echo "Image details:"
-                        docker inspect mimii020/devops-lab2:${version} || echo "Image inspection failed"
-                    """
+                    echo "Image: ${DOCKER_IMAGE}"
                     
                     withCredentials([usernamePassword(
                         credentialsId: 'docker-hub-credentials',
@@ -92,33 +93,14 @@ pipeline {
                         passwordVariable: 'DOCKER_PASS'
                     )]) {
                         sh """
-                            set +x  # Hide commands for security
+                            echo "🔐 Logging into Docker Hub..."
+                            echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin
                             
-                            echo "🔐 Attempting Docker Hub login..."
-                            if echo \"\$DOCKER_PASS\" | docker login -u \"\$DOCKER_USER\" --password-stdin; then
-                                echo "✅ Docker Hub login successful"
-                            else
-                                echo "❌ Docker Hub login failed"
-                                exit 1
-                            fi
+                            echo "🚀 Pushing ${DOCKER_IMAGE}:${version}"
+                            docker push ${DOCKER_IMAGE}:${version}
                             
-                            echo "🚀 Pushing mimii020/devops-lab2:${version}"
-                            if docker push mimii020/devops-lab2:${version}; then
-                                echo "✅ Version ${version} pushed successfully"
-                            else
-                                echo "❌ Failed to push version ${version}"
-                                echo "Error details:"
-                                docker push mimii020/devops-lab2:${version} 2>&1 | tail -20
-                                exit 1
-                            fi
-                            
-                            echo "🚀 Pushing mimii020/devops-lab2:latest"
-                            if docker push mimii020/devops-lab2:latest; then
-                                echo "✅ Latest tag pushed successfully"
-                            else
-                                echo "❌ Failed to push latest tag"
-                                exit 1
-                            fi
+                            echo "🚀 Pushing ${DOCKER_IMAGE}:latest"
+                            docker push ${DOCKER_IMAGE}:latest
                             
                             docker logout
                             echo "🎉 All images pushed to Docker Hub successfully!"
@@ -126,7 +108,6 @@ pipeline {
                     }
                 }
             }
-        }
         }
     }
     
@@ -149,7 +130,10 @@ pipeline {
         }
         always {
             echo 'Pipeline execution completed. Cleaning up workspace...'
+            // Clean up any running containers
+            sh 'docker stop test-container || true'
+            sh 'docker rm test-container || true'
             cleanWs()
         }
     }
-
+}
