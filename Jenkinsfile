@@ -55,13 +55,14 @@ pipeline {
         }
     }
 }
+// sonarqube for cod quality analysis
         
         stage('Test Docker Image') {
             steps {
                 script {
                     def version = sh(script: 'mvn help:evaluate -Dexpression=project.version -q -DforceStdout', returnStdout: true).trim()
                     
-                    docker.image("${DOCKER_IMAGE}:${version}").withRun('-p 8081:8080') { container ->
+                    docker.image("${DOCKER_REGISTRY}/${DOCKER_IMAGE}:${version}").withRun('-p 8081:8080') { container ->
                         sh 'sleep 30' // Wait for application to start
                         sh 'curl -f http://localhost:8080/health || exit 1'
                     }
